@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="details_padding">8dp</dimen>
+    <dimen name="elevation_std">4dp</dimen>
+    <dimen name="fading_edge_length">5dp</dimen>
+    <dimen name="padding_std">16dp</dimen>
+    <dimen name="details_title_size">24dp</dimen>
+    <dimen name="padding_list">4dp</dimen>
+    <dimen name="item_margin">4dp</dimen>
+</resources>

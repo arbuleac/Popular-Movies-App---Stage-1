@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Popcorn</string>
+    <string name="retry">retry</string>
+    <string name="movies_load_error_text">Failed to load movies</string>
+    <string name="action_sort">Sort by</string>
+    <string name="action_sort_popularity">Sort by popularity</string>
+    <string name="action_sort_rating">Sort by rating</string>
+    <string name="empty" />
+</resources>
