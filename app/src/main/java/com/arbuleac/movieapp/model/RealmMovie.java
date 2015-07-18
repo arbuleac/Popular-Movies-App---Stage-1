@@ -1,23 +1,26 @@
 package com.arbuleac.movieapp.model;
 
-import android.os.Parcel;
-import android.os.Parcelable;
+import android.content.Context;
 
 import com.google.gson.annotations.SerializedName;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import io.realm.Realm;
+import io.realm.RealmObject;
+import io.realm.annotations.Ignore;
 
 /**
  * @since 7/12/15.
  */
-public class Movie implements Parcelable {
+public class RealmMovie extends RealmObject {
 
     @SerializedName("adult")
     private boolean adult;
     @SerializedName("backdrop_path")
     private String backdropPath;
+    @Ignore
     @SerializedName("genre_ids")
     private List<Integer> genreIds;
     @SerializedName("id")
@@ -155,75 +158,28 @@ public class Movie implements Parcelable {
         this.voteCount = voteCount;
     }
 
-    @Override
-    public int describeContents() {
-        return 0;
-    }
+    public static RealmMovie from(Context context, Movie movie) {
+        Realm realm = Realm.getInstance(context);
+        realm.beginTransaction();
 
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-        dest.writeByte(adult ? (byte) 1 : (byte) 0);
-        dest.writeString(this.backdropPath);
-        dest.writeList(this.genreIds);
-        dest.writeInt(this.id);
-        dest.writeString(this.originalLanguage);
-        dest.writeString(this.originalTitle);
-        dest.writeString(this.overview);
-        dest.writeLong(releaseDate != null ? this.releaseDate.getTime() : 0);
-        dest.writeString(this.posterPath);
-        dest.writeDouble(this.popularity);
-        dest.writeString(this.title);
-        dest.writeByte(video ? (byte) 1 : (byte) 0);
-        dest.writeDouble(this.voteAverage);
-        dest.writeInt(this.voteCount);
-    }
+        RealmMovie realmMovie = realm.createObject(RealmMovie.class);
+        realmMovie.setAdult(movie.isAdult());
+        realmMovie.setBackdropPath(movie.getBackdropPath());
+        realmMovie.setGenreIds(movie.getGenreIds());
+        realmMovie.setId(movie.getId());
+        realmMovie.setOriginalLanguage(movie.getOriginalLanguage());
+        realmMovie.setOverview(movie.getOverview());
+        realmMovie.setOriginalTitle(movie.getOriginalTitle());
+        realmMovie.setPopularity(movie.getPopularity());
+        realmMovie.setPosterPath(movie.getPosterPath());
+        realmMovie.setReleaseDate(movie.getReleaseDate());
+        realmMovie.setVideo(movie.isVideo());
+        realmMovie.setVoteAverage(movie.getVoteAverage());
+        realmMovie.setVoteCount(movie.getVoteCount());
 
-    public Movie() {
-    }
+        realm.commitTransaction();
+        realm.close();
 
-    protected Movie(Parcel in) {
-        this.adult = in.readByte() != 0;
-        this.backdropPath = in.readString();
-        this.genreIds = new ArrayList<Integer>();
-        in.readList(this.genreIds, List.class.getClassLoader());
-        this.id = in.readInt();
-        this.originalLanguage = in.readString();
-        this.originalTitle = in.readString();
-        this.overview = in.readString();
-        this.releaseDate = new Date(in.readLong());
-        this.posterPath = in.readString();
-        this.popularity = in.readDouble();
-        this.title = in.readString();
-        this.video = in.readByte() != 0;
-        this.voteAverage = in.readDouble();
-        this.voteCount = in.readInt();
-    }
-
-    public static final Parcelable.Creator<Movie> CREATOR = new Parcelable.Creator<Movie>() {
-        public Movie createFromParcel(Parcel source) {
-            return new Movie(source);
-        }
-
-        public Movie[] newArray(int size) {
-            return new Movie[size];
-        }
-    };
-
-    public static Movie from(RealmMovie realmMovie) {
-        Movie movie = new Movie();
-        movie.setAdult(realmMovie.isAdult());
-        movie.setBackdropPath(realmMovie.getBackdropPath());
-        movie.setGenreIds(realmMovie.getGenreIds());
-        movie.setId(realmMovie.getId());
-        movie.setOriginalLanguage(realmMovie.getOriginalLanguage());
-        movie.setOverview(realmMovie.getOverview());
-        movie.setOriginalTitle(realmMovie.getOriginalTitle());
-        movie.setPopularity(realmMovie.getPopularity());
-        movie.setPosterPath(realmMovie.getPosterPath());
-        movie.setReleaseDate(realmMovie.getReleaseDate());
-        movie.setVideo(realmMovie.isVideo());
-        movie.setVoteAverage(realmMovie.getVoteAverage());
-        movie.setVoteCount(realmMovie.getVoteCount());
-        return movie;
+        return realmMovie;
     }
 }

@@ -17,6 +17,10 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    packagingOptions {
+        exclude 'META-INF/services/javax.annotation.processing.Processor'
+    }
 }
 
 dependencies {
@@ -37,4 +41,6 @@ dependencies {
 
     compile 'uk.co.chrisjenx:calligraphy:2.1.0'
     compile 'me.grantland:autofittextview:0.2.1'
+
+    compile 'io.realm:realm-android:0.81.1'
 }

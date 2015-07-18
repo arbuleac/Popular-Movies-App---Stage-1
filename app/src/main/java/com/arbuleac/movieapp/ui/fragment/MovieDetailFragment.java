@@ -5,12 +5,19 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v7.graphics.Palette;
+import android.support.v7.widget.CardView;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.StyleSpan;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -18,6 +25,12 @@ import android.widget.TextView;
 
 import com.arbuleac.movieapp.R;
 import com.arbuleac.movieapp.model.Movie;
+import com.arbuleac.movieapp.model.RealmMovie;
+import com.arbuleac.movieapp.model.response.ReviewResult;
+import com.arbuleac.movieapp.model.response.VideoResult;
+import com.arbuleac.movieapp.sync.ApiHelper;
+import com.arbuleac.movieapp.ui.adapter.ReviewAdapter;
+import com.arbuleac.movieapp.ui.adapter.TrailerAdapter;
 import com.arbuleac.movieapp.util.Constants;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Transformation;
@@ -28,6 +41,10 @@ import java.util.Locale;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
+import io.realm.Realm;
+import retrofit.Callback;
+import retrofit.RetrofitError;
+import retrofit.client.Response;
 
 public class MovieDetailFragment extends Fragment {
     public static final String ARG_MOVIE = "movie";
@@ -42,11 +59,21 @@ public class MovieDetailFragment extends Fragment {
     TextView ratingTv;
     @Bind(R.id.overview_tv)
     TextView overviewTv;
+    @Bind(R.id.trailer_rv)
+    RecyclerView trailersRv;
+    @Bind(R.id.reviews_rv)
+    RecyclerView reviewsRv;
+    @Bind(R.id.reviews_cv)
+    CardView reviewsCv;
+    @Bind(R.id.trailers_cv)
+    CardView trailersCv;
 
     private Movie movie;
     private Palette colorPalette;
     private Handler handler = new Handler();
     private SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
+    private TrailerAdapter trailersAdapter;
+    private ReviewAdapter reviewsAdapter;
 
 
     public MovieDetailFragment() {
@@ -55,7 +82,7 @@ public class MovieDetailFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        setHasOptionsMenu(true);
         if (getArguments().containsKey(ARG_MOVIE)) {
             movie = getArguments().getParcelable(ARG_MOVIE);
         }
@@ -117,6 +144,104 @@ public class MovieDetailFragment extends Fragment {
             overviewTv.setText(R.string.empty);
         }
 
+        trailersRv.setLayoutManager(new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
+        trailersAdapter = new TrailerAdapter();
+        trailersRv.setAdapter(trailersAdapter);
+
+        reviewsRv.setLayoutManager(new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
+        reviewsAdapter = new ReviewAdapter();
+        reviewsRv.setAdapter(reviewsAdapter);
+        loadDetails();
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.details, menu);
+    }
+
+    @Override
+    public void onPrepareOptionsMenu(Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+        MenuItem favItem = menu.findItem(R.id.action_fav);
+        if (favItem == null) {
+            return;
+        }
+        favItem.setIcon(isFav(movie) ? R.drawable.ic_fav_full : R.drawable.ic_fav_empty);
+        favItem.setTitle(isFav(movie) ? R.string.action_rm_fav : R.string.action_add_fav);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_fav:
+                onFavClicked(movie);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private void onFavClicked(Movie movie) {
+        if (isFav(movie)) {
+            Realm realm = Realm.getInstance(getActivity());
+            realm.beginTransaction();
+            realm.where(RealmMovie.class).equalTo("id", movie.getId()).findFirst().removeFromRealm();
+            realm.commitTransaction();
+            realm.close();
+        } else {
+            RealmMovie.from(getActivity(), movie);
+        }
+        getActivity().supportInvalidateOptionsMenu();
+    }
+
+    private boolean isFav(Movie movie) {
+        return Realm.getInstance(getActivity()).where(RealmMovie.class).equalTo("id", movie.getId()).findFirst() != null;
+    }
+
+    private void loadDetails() {
+        loadTrailers();
+        loadReviews();
+    }
+
+    private void loadTrailers() {
+        ApiHelper.getApi().trailers(movie.getId(), new Callback<VideoResult>() {
+            @Override
+            public void success(VideoResult videoResult, Response response) {
+                if (videoResult.getResults().size() > 0) {
+                    trailersCv.setVisibility(View.VISIBLE);
+                }
+                trailersAdapter.setVideos(videoResult.getResults());
+            }
+
+            @Override
+            public void failure(RetrofitError error) {
+                if (getActivity() == null) {
+                    return;
+                }
+                Snackbar.make(getView(), getString(R.string.load_trailers_error_message), Snackbar.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void loadReviews() {
+        ApiHelper.getApi().reviews(movie.getId(), new Callback<ReviewResult>() {
+            @Override
+            public void success(ReviewResult reviewResult, Response response) {
+                if (reviewResult.getResults().size() > 0) {
+                    reviewsCv.setVisibility(View.VISIBLE);
+                }
+                reviewsAdapter.setReviews(reviewResult.getResults());
+            }
+
+            @Override
+            public void failure(RetrofitError error) {
+                if (getActivity() == null) {
+                    return;
+                }
+                Snackbar.make(getView(), getString(R.string.load_trailers_error_message), Snackbar.LENGTH_LONG).show();
+            }
+        });
     }
 
     @Override

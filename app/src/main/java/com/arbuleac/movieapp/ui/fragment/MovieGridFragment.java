@@ -17,6 +17,7 @@ import android.view.ViewGroup;
 
 import com.arbuleac.movieapp.R;
 import com.arbuleac.movieapp.model.Movie;
+import com.arbuleac.movieapp.model.RealmMovie;
 import com.arbuleac.movieapp.model.response.MovieResult;
 import com.arbuleac.movieapp.sync.ApiHelper;
 import com.arbuleac.movieapp.ui.MovieGridActivity;
@@ -25,11 +26,15 @@ import com.arbuleac.movieapp.ui.widget.EndlessRecyclerOnScrollListener;
 import com.arbuleac.movieapp.util.Constants;
 import com.arbuleac.movieapp.util.ContentManager;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
+import io.realm.Realm;
+import io.realm.RealmChangeListener;
+import io.realm.RealmList;
 import retrofit.Callback;
 import retrofit.RetrofitError;
 import retrofit.client.Response;
@@ -55,6 +60,14 @@ public class MovieGridFragment extends Fragment {
     };
     private MovieAdapter moviesAdapter;
     private GridLayoutManager gridLayoutManager;
+    private RealmChangeListener realmChangeListener = new RealmChangeListener() {
+        @Override
+        public void onChange() {
+            if (ContentManager.getInstance(getActivity()).getSortOrder().equals(Constants.SORT_BY_FAV)) {
+                reloadData();
+            }
+        }
+    };
 
     @Nullable
     @Override
@@ -84,6 +97,18 @@ public class MovieGridFragment extends Fragment {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        Realm.getInstance(getActivity()).addChangeListener(realmChangeListener);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        Realm.getInstance(getActivity()).removeAllChangeListeners();
+    }
+
+    @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         inflater.inflate(R.menu.main, menu);
@@ -108,6 +133,9 @@ public class MovieGridFragment extends Fragment {
             case Constants.SORT_BY_HIGHEST_RATED:
                 menu.findItem(R.id.action_sort_rating).setChecked(true);
                 break;
+            case Constants.SORT_BY_FAV:
+                menu.findItem(R.id.action_sort_fav).setChecked(true);
+                break;
         }
     }
 
@@ -122,6 +150,9 @@ public class MovieGridFragment extends Fragment {
             case R.id.action_sort_rating:
                 selectedSort = Constants.SORT_BY_HIGHEST_RATED;
                 break;
+            case R.id.action_sort_fav:
+                selectedSort = Constants.SORT_BY_FAV;
+                break;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -133,17 +164,29 @@ public class MovieGridFragment extends Fragment {
         return true;
     }
 
-    private void reloadData() {
-        movies.clear();
-        currentPage = 1;
-        loadMovies(currentPage, ContentManager.getInstance(getActivity()).getSortOrder());
-    }
-
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         ButterKnife.unbind(this);
     }
+
+    private void reloadData() {
+        movies.clear();
+        if (ContentManager.getInstance(getActivity()).getSortOrder().equals(Constants.SORT_BY_FAV)) {
+            loadFavMovies();
+        } else {
+            currentPage = 1;
+            loadMovies(currentPage, ContentManager.getInstance(getActivity()).getSortOrder());
+        }
+    }
+
+    private void loadFavMovies() {
+        for (RealmMovie realmMovie : Realm.getInstance(getActivity()).where(RealmMovie.class).findAll()) {
+            movies.add(Movie.from(realmMovie));
+        }
+        moviesAdapter.notifyDataSetChanged();
+    }
+
 
     private void loadMovies(int page, String sortBy) {
         ApiHelper.getApi().discoverMovie(page, sortBy, new Callback<MovieResult>() {

@@ -6,4 +6,10 @@
     <string name="action_sort_popularity">Sort by popularity</string>
     <string name="action_sort_rating">Sort by rating</string>
     <string name="empty" />
+    <string name="trailers_title">Trailers</string>
+    <string name="reviews_title">Reviews</string>
+    <string name="load_trailers_error_message">Failed to load trailers!</string>
+    <string name="action_add_fav">Add to Favorites</string>
+    <string name="action_rm_fav">Remove from Favorites</string>
+    <string name="action_sort_fav_title">Favorites</string>
 </resources>
