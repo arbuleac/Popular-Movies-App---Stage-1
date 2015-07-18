@@ -1,5 +1,6 @@
 package com.arbuleac.movieapp.ui.fragment;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -26,6 +27,7 @@ import android.widget.TextView;
 import com.arbuleac.movieapp.R;
 import com.arbuleac.movieapp.model.Movie;
 import com.arbuleac.movieapp.model.RealmMovie;
+import com.arbuleac.movieapp.model.Video;
 import com.arbuleac.movieapp.model.response.ReviewResult;
 import com.arbuleac.movieapp.model.response.VideoResult;
 import com.arbuleac.movieapp.sync.ApiHelper;
@@ -37,6 +39,7 @@ import com.squareup.picasso.Transformation;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import butterknife.Bind;
@@ -74,6 +77,7 @@ public class MovieDetailFragment extends Fragment {
     private SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
     private TrailerAdapter trailersAdapter;
     private ReviewAdapter reviewsAdapter;
+    private List<Video> trailers;
 
 
     public MovieDetailFragment() {
@@ -164,11 +168,13 @@ public class MovieDetailFragment extends Fragment {
     public void onPrepareOptionsMenu(Menu menu) {
         super.onPrepareOptionsMenu(menu);
         MenuItem favItem = menu.findItem(R.id.action_fav);
-        if (favItem == null) {
-            return;
+        if (favItem != null) {
+            favItem.setIcon(isFav(movie) ? R.drawable.ic_fav_full : R.drawable.ic_fav_empty);
+            favItem.setTitle(isFav(movie) ? R.string.action_rm_fav : R.string.action_add_fav);
         }
-        favItem.setIcon(isFav(movie) ? R.drawable.ic_fav_full : R.drawable.ic_fav_empty);
-        favItem.setTitle(isFav(movie) ? R.string.action_rm_fav : R.string.action_add_fav);
+
+        MenuItem shareItem = menu.findItem(R.id.action_share);
+        shareItem.setVisible(trailers != null && trailers.size() > 0);
     }
 
     @Override
@@ -177,9 +183,21 @@ public class MovieDetailFragment extends Fragment {
             case R.id.action_fav:
                 onFavClicked(movie);
                 return true;
+            case R.id.action_share:
+                onShareClicked();
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private void onShareClicked() {
+        Intent share = new Intent(android.content.Intent.ACTION_SEND);
+        share.setType("text/plain");
+
+        share.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_trailer_title_text));
+        share.putExtra(Intent.EXTRA_TEXT, "http://www.youtube.com/watch?v=" + trailers.get(0).getKey());
+
+        startActivity(Intent.createChooser(share, getString(R.string.share_trailer_title)));
     }
 
     private void onFavClicked(Movie movie) {
@@ -210,6 +228,8 @@ public class MovieDetailFragment extends Fragment {
             public void success(VideoResult videoResult, Response response) {
                 if (videoResult.getResults().size() > 0) {
                     trailersCv.setVisibility(View.VISIBLE);
+                    trailers = videoResult.getResults();
+                    getActivity().supportInvalidateOptionsMenu();
                 }
                 trailersAdapter.setVideos(videoResult.getResults());
             }
